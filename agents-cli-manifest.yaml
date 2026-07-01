@@ -1,0 +1,6 @@
+name: neural-networks-project
+agent_directory: app
+deployment_target: agent_runtime
+acli_version: 0.5.0
+create_params:
+  deployment_target: agent_runtime

@@ -1,0 +1,47 @@
+# Project Structure
+
+Unless requested otherwise, generate
+
+project/
+
+    config.py
+
+    train.py
+
+    evaluate.py
+
+    predict.py
+
+    requirements.txt
+
+    datasets/
+
+        preprocessing.py
+
+        dataset.py
+
+    models/
+
+        architecture.py
+
+    trainers/
+
+        trainer.py
+
+    metrics/
+
+        metrics.py
+
+    utils/
+
+        plotting.py
+
+        checkpoint.py
+
+        seed.py
+
+    README.md
+
+Each module should have one clear responsibility.
+
+Avoid monolithic scripts.
