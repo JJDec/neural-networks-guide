@@ -1,3 +1,13 @@
+# Neural Networks Guide - AI Agent Prototype
+
+Neural Networks Guide is an AI agent for good prototype, advancing education, that specializes in advanced neural networks architectures and supports users with their implementation and development for various tasks.
+
+It is a simple ReAct agent generated with agents-cli, enhanced with neural networks skills, that extend AI agent capabilities with specialized knowledge and workflows. The current version includes skills for neural networks forecasting to generate production-quality Python and PyTorch implementations for neural network forecasting models. Skills can be extended by adding models, and neural networks applications (anomaly detection, classification, pattern recognition).
+
+The agent can contribute to advanced neural network development in ways that go beyond simply generating code. Agents strength is that they can operate autonomously across many steps of the machine learning workflow, making decisions, running experiments, and adapting based on results. Agents could also help with neural networks models interpretability and their outputs explainability.
+
+Demo: https://www.youtube.com/watch?v=L6q10hxdzpQ
+
 # neural-networks-project
 
 Simple ReAct agent
