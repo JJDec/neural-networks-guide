@@ -1,0 +1,21 @@
+
+============================================================
+  Evaluation on test set
+============================================================
+
+  Metric            Value
+  ------------------------
+  MAE             0.1091
+  RMSE            0.1367
+  MSE             0.0187
+  MAPE           37.3627%
+  SMAPE          25.7281%
+  R2              0.9820
+  MASE            0.3002
+
+  Saving plots …
+  Saved: outputs\forecast_vs_actual.png
+  Saved: outputs\residuals.png
+  Saved: outputs\error_by_horizon.png
+
+  All outputs saved to: C:\Users\Joanna\agy2-projects\neural-networks-project\outputs
