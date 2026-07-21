@@ -58,7 +58,7 @@ A stack of $N_d$ `ResidualBlock` modules that decodes the global latent vector $
 
 #### 5. Temporal Decoder (`TemporalDecoder`)
 Applies a shared dense layer across each forecast horizon step $h \in [1, H]$, combining the decoder output at step $h$ with the future known covariates at step $h$:
-$$\hat{y}_{\text{deep}, h} = \text{Linear}(\text{DecoderOut}_h \,||\, \text{FutureCov}_h)$$
+$`\hat{y}_{\text{deep}, h} = \text{Linear}(\text{DecoderOut}_h \,||\, \text{FutureCov}_h)`$
 
 #### 6. Global Linear Skip Connection (`Linear`)
 A direct linear transformation mapping the raw look-back target values directly to the horizon:
@@ -102,29 +102,29 @@ def plot_skip_weights(model, save_path="outputs/tide/skip_weights.png"):
 ### 3.2 Linear vs. Non-linear Component Output Decomposition
 
 TiDE naturally decomposes forecasts into two distinct additive components:
-1. **Linear Skip Component ($\hat{y}_{\text{skip}}$):** Captures auto-regressive baseline trends, seasonality, and persistent levels.
-2. **Deep Residual Component ($\hat{y}_{\text{deep}}$):** Captures complex nonlinear feature interactions, covariate effects, and non-stationary pattern shifts.
+1. **Linear Skip Component ($`\hat{y}_{\text{skip}}`$):** Captures auto-regressive baseline trends, seasonality, and persistent levels.
+2. **Deep Residual Component ($`\hat{y}_{\text{deep}}`$):** Captures complex nonlinear feature interactions, covariate effects, and non-stationary pattern shifts.
 
-By measuring the relative norm or variance of $\hat{y}_{\text{skip}}$ vs. $\hat{y}_{\text{deep}}$, practitioners can quantify the proportion of the forecast driven by simple trend/seasonality versus complex feature interactions:
+By measuring the relative norm or variance of $`\hat{y}_{\text{skip}}`$ vs. $`\hat{y}_{\text{deep}}`$, practitioners can quantify the proportion of the forecast driven by simple trend/seasonality versus complex feature interactions:
 $`\text{Linear Contribution Ratio} = \frac{\|\hat{y}_{\text{skip}}\|_2}{\|\hat{y}_{\text{skip}}\|_2 + \|\hat{y}_{\text{deep}}\|_2}`$
 
 ### 3.3 Feature Projection Input Attribution
 
 In `FeatureProjection`, the input layer receives concatenated vectors of:
 * Past Targets: $[y_1, y_2, \dots, y_L]$
-* Historical Covariates: $[\mathbf{X}_{\text{hist}, 1}, \dots, \mathbf{X}_{\text{hist}, L}]$
-* Future Covariates: $[\mathbf{X}_{\text{fut}, 1}, \dots, \mathbf{X}_{\text{fut}, H}]$
+* Historical Covariates: $`[\mathbf{X}_{\text{hist}, 1}, \dots, \mathbf{X}_{\text{hist}, L}]`$
+* Future Covariates: $`[\mathbf{X}_{\text{fut}, 1}, \dots, \mathbf{X}_{\text{fut}, H}]`$
 
 By computing the mean absolute weight ($\text{MAW}$) or Frobenius norm of the weights corresponding to each feature channel in the first linear layer (`feature_proj.proj.fc1`), we obtain global feature importance scores:
 
-$$\text{Importance}(f) = \frac{1}{K_f} \sum_{i \in \text{indices}(f)} \|W_{\text{proj}}[:, i]\|_1$$
+$`\text{Importance}(f) = \frac{1}{K_f} \sum_{i \in \text{indices}(f)} \|W_{\text{proj}}[:, i]\|_1`$
 
 This identifies whether historical targets, calendar features, or ambient environmental covariates contribute most to the deep representation.
 
 ### 3.4 Gradient-Based Attribution (Saliency Maps & Integrated Gradients)
 
 Because TiDE uses smooth, fully differentiable activations (GELU) and linear projections, input attribution can be computed using standard gradient backpropagation:
-$$\text{Saliency}(x_i) = \left| \frac{\partial \hat{y}_h}{\partial x_i} \cdot x_i \right|$$
+$`\text{Saliency}(x_i) = \left| \frac{\partial \hat{y}_h}{\partial x_i} \cdot x_i \right|`$
 
 Unlike Transformer attention matrices which suffer from attention-weight unreliability, gradient attributions in dense residual networks accurately reflect causal input sensitivity.
 
