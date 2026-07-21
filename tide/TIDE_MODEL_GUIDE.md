@@ -46,14 +46,15 @@ $$\text{Output} = \text{LayerNorm}(\text{Linear}_2(\text{Dropout}(\text{GELU}(\t
 
 #### 2. Feature Projection (`FeatureProjection`)
 Flattens and concatenates all inputs across time and feature dimensions into a single vector of size:
-$$\text{flat\_dim} = L + (L \times C_{\text{hist}}) + (H \times C_{\text{fut}})$$
+$`\text{flat\_dim} = L + (L \times C_{\text{hist}}) + (H \times C_{\text{fut}})`$
+
 Passes the concatenated vector through a `ResidualBlock` to project it into the model's core hidden dimension `hidden_size`.
 
 #### 3. Dense Encoder (`TiDEEncoder`)
-A stack of $N_e$ `ResidualBlock` modules operating on the projected representation to extract a compact, global latent vector $z \in \mathbb{R}^{\text{hidden\_size}}$.
+A stack of $N_e$ `ResidualBlock` modules operating on the projected representation to extract a compact, global latent vector $`z \in \mathbb{R}^{\text{hidden\_size}}`$.
 
 #### 4. Dense Decoder (`TiDEDecoder`)
-A stack of $N_d$ `ResidualBlock` modules that decodes the global latent vector $z$ into per-step temporal features of shape $(B, H, \text{temporal\_hidden})$.
+A stack of $N_d$ `ResidualBlock` modules that decodes the global latent vector $z$ into per-step temporal features of shape $`(B, H, \text{temporal\_hidden})`$.
 
 #### 5. Temporal Decoder (`TemporalDecoder`)
 Applies a shared dense layer across each forecast horizon step $h \in [1, H]$, combining the decoder output at step $h$ with the future known covariates at step $h$:
@@ -61,9 +62,9 @@ $$\hat{y}_{\text{deep}, h} = \text{Linear}(\text{DecoderOut}_h \,||\, \text{Futu
 
 #### 6. Global Linear Skip Connection (`Linear`)
 A direct linear transformation mapping the raw look-back target values directly to the horizon:
-$$\hat{y}_{\text{skip}} = W_{\text{skip}} \, y_{1:L} + b_{\text{skip}}$$
+$`\hat{y}_{\text{skip}} = W_{\text{skip}} \, y_{1:L} + b_{\text{skip}}`$
 The final forecast is the sum of the linear skip prediction and the deep temporal decoder output:
-$$\hat{y}_{\text{final}} = \hat{y}_{\text{skip}} + \hat{y}_{\text{deep}}$$
+$`\hat{y}_{\text{final}} = \hat{y}_{\text{skip}} + \hat{y}_{\text{deep}}`$
 
 ---
 
@@ -105,7 +106,7 @@ TiDE naturally decomposes forecasts into two distinct additive components:
 2. **Deep Residual Component ($\hat{y}_{\text{deep}}$):** Captures complex nonlinear feature interactions, covariate effects, and non-stationary pattern shifts.
 
 By measuring the relative norm or variance of $\hat{y}_{\text{skip}}$ vs. $\hat{y}_{\text{deep}}$, practitioners can quantify the proportion of the forecast driven by simple trend/seasonality versus complex feature interactions:
-$$\text{Linear Contribution Ratio} = \frac{\|\hat{y}_{\text{skip}}\|_2}{\|\hat{y}_{\text{skip}}\|_2 + \|\hat{y}_{\text{deep}}\|_2}$$
+$`\text{Linear Contribution Ratio} = \frac{\|\hat{y}_{\text{skip}}\|_2}{\|\hat{y}_{\text{skip}}\|_2 + \|\hat{y}_{\text{deep}}\|_2}`$
 
 ### 3.3 Feature Projection Input Attribution
 
