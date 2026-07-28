@@ -30,6 +30,12 @@ from torch.utils.data import DataLoader
 
 from tide.config import TiDEConfig
 
+try:
+    import wandb as _wandb
+    _WANDB_AVAILABLE = True
+except ImportError:
+    _WANDB_AVAILABLE = False
+
 
 # ---------------------------------------------------------------------------
 # Loss factory
@@ -143,6 +149,46 @@ class Trainer:
 
         cfg.checkpoint_dir.mkdir(parents=True, exist_ok=True)
         self._ckpt_path = cfg.checkpoint_dir / "best_model.pt"
+
+        # ── Weights & Biases initialisation ────────────────────────────────
+        self._wandb_run = None
+        if cfg.wandb_enabled and _WANDB_AVAILABLE:
+            self._wandb_run = _wandb.init(
+                project=cfg.wandb_project,
+                entity=cfg.wandb_entity,
+                name=cfg.wandb_run_name,
+                config={
+                    # data
+                    "input_len": cfg.input_len,
+                    "horizon": cfg.horizon,
+                    "train_frac": cfg.train_frac,
+                    "val_frac": cfg.val_frac,
+                    # model
+                    "hidden_size": cfg.hidden_size,
+                    "num_encoder_layers": cfg.num_encoder_layers,
+                    "num_decoder_layers": cfg.num_decoder_layers,
+                    "temporal_decoder_hidden": cfg.temporal_decoder_hidden,
+                    "dropout": cfg.dropout,
+                    "use_layer_norm": cfg.use_layer_norm,
+                    # training
+                    "lr": cfg.lr,
+                    "weight_decay": cfg.weight_decay,
+                    "batch_size": cfg.batch_size,
+                    "max_epochs": cfg.max_epochs,
+                    "patience": cfg.patience,
+                    "loss": cfg.loss,
+                    "grad_clip": cfg.grad_clip,
+                    "seed": cfg.seed,
+                },
+                tags=["tide", "forecasting", "electricity"],
+                reinit=True,
+            )
+            # track gradients and model topology every 10 batches
+            _wandb.watch(model, log="gradients", log_freq=10)
+            print(f"  W&B run: {self._wandb_run.url}")
+        elif cfg.wandb_enabled and not _WANDB_AVAILABLE:
+            print("  [WARNING] wandb_enabled=True but 'wandb' package is not installed."
+                  " Run: uv add wandb")
 
     # ── Internal helpers ──────────────────────────────────────────────────
 
@@ -266,6 +312,18 @@ class Trainer:
                 f"lr {lr_now:.2e} | {elapsed:.1f}s{ckpt_marker}"
             )
 
+            # ── W&B: log per-epoch metrics ───────────────────────────────
+            if self._wandb_run is not None:
+                _wandb.log(
+                    {
+                        "train/loss": train_loss,
+                        "val/loss": val_loss,
+                        "train/lr": lr_now,
+                        "epoch_time_s": elapsed,
+                    },
+                    step=epoch,
+                )
+
             if self.on_epoch_end is not None:
                 self.on_epoch_end(epoch, train_loss, val_loss)
 
@@ -275,4 +333,17 @@ class Trainer:
 
         print(f"\nBest val loss: {best_val:.5f}")
         print(f"Checkpoint: {self._ckpt_path}\n")
+
+        # ── W&B: log summary & finish run ─────────────────────────────
+        if self._wandb_run is not None:
+            _wandb.summary["best_val_loss"] = best_val
+            # upload the best checkpoint as a W&B Artifact
+            artifact = _wandb.Artifact(
+                name=f"tide-checkpoint-{self._wandb_run.id}",
+                type="model",
+                description="Best TiDE checkpoint saved during training",
+            )
+            artifact.add_file(str(self._ckpt_path))
+            self._wandb_run.log_artifact(artifact)
+
         return history

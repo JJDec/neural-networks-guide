@@ -72,6 +72,16 @@ class TiDEConfig:
         Directory where evaluation plots are saved.
     seed:
         Global random seed for reproducibility.
+    # ── Weights & Biases ──────────────────────────────────────────────────
+    wandb_enabled:
+        Whether to log this run to Weights & Biases.
+    wandb_project:
+        W&B project name (e.g. ``"tide-forecasting"``).
+    wandb_entity:
+        W&B entity (username or team, e.g. ``"j95-jaworska-na"``).
+    wandb_run_name:
+        Optional human-readable name for this W&B run.  If ``None`` W&B
+        generates a random name automatically.
     """
 
     # ── Data ──────────────────────────────────────────────────────────────
@@ -108,6 +118,12 @@ class TiDEConfig:
     output_dir: Path = field(default_factory=lambda: Path("outputs"))
     model_name: str = "tide"
     seed: int = 42
+
+    # ── Weights & Biases ──────────────────────────────────────────────────
+    wandb_enabled: bool = False
+    wandb_project: str = "tide-forecasting"
+    wandb_entity: str = "j95-jaworska-na"
+    wandb_run_name: str | None = None
 
     def __post_init__(self) -> None:
         """Validate config values after initialisation."""

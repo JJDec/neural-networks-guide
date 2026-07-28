@@ -15,6 +15,7 @@ uv run python tide/train.py --max_epochs 5 --batch_size 32
 from __future__ import annotations
 
 import argparse
+import os
 import random
 from pathlib import Path
 
@@ -27,6 +28,47 @@ from tide.evaluation.evaluate import evaluate
 from tide.inference.predict import load_model
 from tide.models.tide import TiDEModel
 from tide.trainer.trainer import Trainer
+
+try:
+    import wandb as _wandb
+    _WANDB_AVAILABLE = True
+except ImportError:
+    _WANDB_AVAILABLE = False
+
+
+# ---------------------------------------------------------------------------
+# .env loader (stdlib only — no python-dotenv dependency required)
+# ---------------------------------------------------------------------------
+
+def _load_dotenv(env_path: Path | None = None) -> None:
+    """Parse a .env file and inject variables into ``os.environ``.
+
+    Only sets variables that are not already present in the environment,
+    so shell exports always take precedence.
+    """
+    if env_path is None:
+        # Walk up from this file until we find .env (handles running from any cwd)
+        candidate = Path(__file__).resolve()
+        for _ in range(5):
+            candidate = candidate.parent
+            dotenv = candidate / ".env"
+            if dotenv.exists():
+                env_path = dotenv
+                break
+
+    if env_path is None or not env_path.exists():
+        return
+
+    with env_path.open(encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if key and key not in os.environ:
+                os.environ[key] = value
 
 
 # ---------------------------------------------------------------------------
@@ -87,6 +129,16 @@ def parse_args() -> TiDEConfig:
     parser.add_argument("--output_dir", type=str, default="outputs")
     parser.add_argument("--seed", type=int, default=42)
 
+    # Weights & Biases
+    parser.add_argument("--wandb", action="store_true",
+                        help="Enable Weights & Biases logging")
+    parser.add_argument("--wandb_project", type=str, default="tide-forecasting",
+                        help="W&B project name")
+    parser.add_argument("--wandb_entity", type=str, default="j95-jaworska-na",
+                        help="W&B entity (username or team)")
+    parser.add_argument("--wandb_run_name", type=str, default=None,
+                        help="Optional W&B run name")
+
     args = parser.parse_args()
 
     return TiDEConfig(
@@ -112,6 +164,10 @@ def parse_args() -> TiDEConfig:
         checkpoint_dir=Path(args.checkpoint_dir),
         output_dir=Path(args.output_dir),
         seed=args.seed,
+        wandb_enabled=args.wandb,
+        wandb_project=args.wandb_project,
+        wandb_entity=args.wandb_entity,
+        wandb_run_name=args.wandb_run_name,
     )
 
 
@@ -121,8 +177,26 @@ def parse_args() -> TiDEConfig:
 
 def main() -> None:
     """Full training and evaluation pipeline."""
+    # Load .env first so WANDB_API_KEY (and other vars) are available
+    _load_dotenv()
+
     cfg = parse_args()
     set_seed(cfg.seed)
+
+    # ── W&B authentication ────────────────────────────────────────────────
+    if cfg.wandb_enabled and _WANDB_AVAILABLE:
+        api_key = os.environ.get("WANDB_API_KEY")
+        if api_key and api_key != "your_wandb_api_key_here":
+            _wandb.login(key=api_key, relogin=True)
+        else:
+            # Fall back to interactive login / netrc / env already set by wandb CLI
+            if not _wandb.login(anonymous="never"):
+                raise RuntimeError(
+                    "W&B login failed. Either:\n"
+                    "  • Set WANDB_API_KEY in your .env file, or\n"
+                    "  • Run:  wandb login\n"
+                    "Get your key at: https://wandb.ai/authorize"
+                )
 
     # ── Device selection ───────────────────────────────────────────────────
     if torch.cuda.is_available():
@@ -164,7 +238,7 @@ def main() -> None:
     print("\nLoading best checkpoint …")
     model = load_model(cfg, device=device_str)
 
-    # ── Evaluation ────────────────────────────────────────────────────────
+    # ── Evaluation ────────────────────────────────────────────────────────────
     evaluate(
         model=model,
         test_loader=test_loader,
@@ -173,6 +247,11 @@ def main() -> None:
         history=history,
         train_targets=train_loader.dataset.data[:, 0].cpu().numpy(),
     )
+
+    # ── W&B: finish run ──────────────────────────────────────────────────
+    if cfg.wandb_enabled and _WANDB_AVAILABLE and _wandb.run is not None:
+        _wandb.finish()
+        print("  W&B run finished.")
 
     # ── Inference demo ────────────────────────────────────────────────────
     print("\n" + "=" * 60)
