@@ -21,6 +21,12 @@ from tide.config import TiDEConfig
 from tide.metrics.forecasting_metrics import compute_all_metrics
 from tide.models.tide import TiDEModel
 
+try:
+    import wandb as _wandb
+    _WANDB_AVAILABLE = True
+except ImportError:
+    _WANDB_AVAILABLE = False
+
 
 # ---------------------------------------------------------------------------
 # Collect predictions
@@ -254,6 +260,33 @@ def evaluate(
 
     if history is not None:
         _plot_training_history(history, cfg.output_dir)
+
+    # ── W&B: log test metrics and plots ───────────────────────────────
+    if _WANDB_AVAILABLE and _wandb.run is not None:
+        # scalar metrics (prefixed with "test/")
+        wandb_metrics = {f"test/{k}": v for k, v in metrics.items()}
+
+        # evaluation plots as W&B Images
+        plot_files = [
+            "forecast_vs_actual.png",
+            "residuals.png",
+            "error_by_horizon.png",
+            "training_history.png",
+        ]
+        wandb_images: dict[str, _wandb.Image] = {}
+        for fname in plot_files:
+            fpath = cfg.output_dir / fname
+            if fpath.exists():
+                key = fname.replace(".png", "").replace("_", " ").title()
+                wandb_images[f"eval/{key}"] = _wandb.Image(
+                    str(fpath), caption=key
+                )
+
+        _wandb.log({**wandb_metrics, **wandb_images})
+        # also surface metrics in the run summary for easy comparison
+        for k, v in metrics.items():
+            _wandb.summary[f"test/{k}"] = v
+        print("  W&B: test metrics and plots logged.")
 
     print(f"\n  All outputs saved to: {cfg.output_dir.resolve()}")
     return metrics
