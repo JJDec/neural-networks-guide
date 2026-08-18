@@ -1,0 +1,16 @@
+
+============================================================
+  Evaluation on test set
+============================================================
+
+  Metric            Value
+  ------------------------
+  MAE             0.1089
+  RMSE            0.1378
+  MSE             0.0190
+  MAPE           47.4680%
+  SMAPE          24.2406%
+  R2              0.9820
+  MASE            0.3000
+
+Evaluation for model trained with default config settings.
